@@ -13,31 +13,35 @@
         position: absolute !important;
         right: 0;
       }
-      /* Optional: Makes the sample page fill the window. */
-      #destination {
-          height: 30%;
-          width: 20%;
-          left: 0;
-          top: 0;
+
+      #source-des {
+        height: 30%;
+        width: 20%;
+        position: absolute !important;
+        left: 0;
+        top: 0;
       }
-    
-    #widget-box {
+
+      #planning-options {
         height: 70%;
         width: 20%;
+        position: absolute !important;
         left: 0;
         bottom: 0;
-    }
+      }
+      /* Optional: Makes the sample page fill the window. */
       html, body {
+        height: 100%;
         margin: 0;
         padding: 0;
       }
-    
     </style>
   </head>
   <body>
     <div id="map"></div>
-    <div id="destination"></div>
-    <div id="widget-box"></div>
+    <div id="source-des"></div>
+    <div id="planning-options"></div>
+      <!-- Grab the user's location and center the map there.  -->
       <script>
         function initMap() {
 
