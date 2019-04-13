@@ -9,6 +9,25 @@
        * element that contains the map. */
       #map {
         height: 100%;
+        width: 80%;
+        position: absolute !important;
+        right: 0;
+      }
+
+      #source-des {
+        height: 30%;
+        width: 20%;
+        position: absolute !important;
+        left: 0;
+        top: 0;
+      }
+
+      #planning-options {
+        height: 70%;
+        width: 20%;
+        position: absolute !important;
+        left: 0;
+        bottom: 0;
       }
       /* Optional: Makes the sample page fill the window. */
       html, body {
@@ -20,6 +39,9 @@
   </head>
   <body>
     <div id="map"></div>
+    <div id="source-des"></div>
+    <div id="planning-options"></div>
+      <!-- Grab the user's location and center the map there.  -->
       <script>
         function initMap() {
 
@@ -29,10 +51,10 @@
           // Center on user's current location if geolocation prompt allowed
           var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
           gMap.setCenter(initialLocation);
-          gMap.setZoom(13);
+          gMap.setZoom(15);
         }, function(positionError) {
-          // User denied geolocation prompt - default to Chicago
-          gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+          // User denied geolocation prompt - default to Boston College
+          gMap.setCenter(new google.maps.LatLng(42.3355, 71.1685));
           gMap.setZoom(5);
         });
       }
