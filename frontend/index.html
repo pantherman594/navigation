@@ -39,7 +39,16 @@
   </head>
   <body>
     <div id="map"></div>
-    <div id="source-des"></div>
+    <div id="source-des">
+      <form action="/action_page.php">
+        Source:<br>
+        <input type="text" name="source"><br>
+        Destination:<br>
+        <input type="text" name="destination"><br><br>
+        <input type="submit" value="Submit">
+      </form>
+
+    </div>
     <div id="planning-options"></div>
       <!-- Grab the user's location and center the map there.  -->
       <script>
