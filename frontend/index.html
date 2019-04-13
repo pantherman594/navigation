@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Navigation</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+        width: 80%;
+        position: absolute !important;
+        right: 0;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      #destination {
+          height: 30%;
+          width: 20%;
+          left: 0;
+          top: 0;
+      }
+    
+    #widget-box {
+        height: 70%;
+        width: 20%;
+        left: 0;
+        bottom: 0;
+    }
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+    
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="destination"></div>
+    <div id="widget-box"></div>
+      <script>
+        function initMap() {
+
+        gMap = new google.maps.Map(document.getElementById('map'));
+
+        navigator.geolocation.getCurrentPosition(function(position) {
+          // Center on user's current location if geolocation prompt allowed
+          var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+          gMap.setCenter(initialLocation);
+          gMap.setZoom(13);
+        }, function(positionError) {
+          // User denied geolocation prompt - default to Chicago
+          gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+          gMap.setZoom(5);
+        });
+      }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM&callback=initMap"
+    async defer></script>
+  </body>
+</html>
