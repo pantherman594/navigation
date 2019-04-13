@@ -40,19 +40,84 @@
   <body>
     <div id="map"></div>
     <div id="source-des">
-      <form action="/action_page.php">
+      <!-- Form to get the source and destination -->
+      <form onsubmit="onSubmit()">
         Source:<br>
-        <input type="text" name="source"><br>
+        <input type="text" name = "source" id="source"><br>
         Destination:<br>
-        <input type="text" name="destination"><br><br>
-        <input type="submit" value="Submit">
+        <input type="text" name="destination" id="destination"><br><br>
+        <input type="submit" value="Submit" name="form" id="form">
       </form>
 
     </div>
     <div id="planning-options"></div>
       <!-- Grab the user's location and center the map there.  -->
-      <script>
-        function initMap() {
+    <script>
+      let source = '';
+      let destination = '';
+      let data = '';
+      let sourceLatLng = '';
+      let destinationLatLng = '';
+      
+      document.getElementById('source').addEventListener("input", function(){
+        autoSource();
+      });
+
+      document.getElementById('destination').addEventListener("input", function(){
+        autoDestination();
+      });
+
+      function onSubmit() {
+        event.preventDefault()
+        document.getElementById("source").value = source;
+        document.getElementById("destination").value = destination;
+        getSourceLatLng();
+        getDestinationLatLng();
+      }
+
+      async function autoSource() {
+        const address = 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/autocomplete/json?components=country:us&types=address&input='
+        let input = document.getElementsByName("source")[0].value;
+        const response = await fetch(address + input + '&key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM', {
+        });
+        data = await response.json();
+        console.log(data.predictions[0].description);
+        source = data.predictions[0].description;
+      }
+
+      async function autoDestination() {
+        const address = 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/autocomplete/json?components=country:us&types=address&input='
+        let input = document.getElementsByName("destination")[0].value;
+        const response = await fetch(address + input + '&key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM', {
+        });
+        data = await response.json();
+        console.log(data.predictions[0].description);
+        destination = data.predictions[0].description;
+      }
+
+      async function getSourceLatLng() {
+        const address = 'http://open.mapquestapi.com/geocoding/v1/address?key=ndy3lEKEGEj3FIGsShsuQVZ5QqtakWer';
+        let address1 = source.split(' ').join('+');
+        console.log(address1);
+        const response = await fetch(address + '&location=' + address1, {
+        });
+        data = await response.json();
+        sourceLatLng = data.results[0].locations[0].latLng;
+        console.log(sourceLatLng);
+      }
+
+      async function getDestinationLatLng() {
+        const address = 'http://open.mapquestapi.com/geocoding/v1/address?key=ndy3lEKEGEj3FIGsShsuQVZ5QqtakWer';
+        let address1 = destination.split(' ').join('+');
+        console.log(address1);
+        const response = await fetch(address + '&location=' + address1, {
+        });
+        data = await response.json();
+        destinationLatLng = data.results[0].locations[0].latLng;
+        console.log(destinationLatLng);
+      }
+
+      function initMap() {
 
         gMap = new google.maps.Map(document.getElementById('map'));
 
