@@ -39,7 +39,7 @@
   </head>
   <body>
     <div id="map"></div>
-    <div id="source-des">
+    <div id="source-des" style="background-color: #4285F4;">
       <!-- Form to get the source and destination -->
       <form onsubmit="onSubmit()">
         Source:<br>
@@ -60,61 +60,80 @@
       let destinationLatLng = '';
       
       document.getElementById('source').addEventListener("input", function(){
-        autoSource();
+        autoFind('source');
       });
 
       document.getElementById('destination').addEventListener("input", function(){
-        autoDestination();
+        autoFind('destination');
       });
 
-      function onSubmit() {
-        event.preventDefault()
-        document.getElementById("source").value = source;
-        document.getElementById("destination").value = destination;
-        getSourceLatLng();
-        getDestinationLatLng();
+      // created the google map widget
+      function initMap() {
+
+        gMap = new google.maps.Map(document.getElementById('map'));
+
+        navigator.geolocation.getCurrentPosition(function(position) {
+          // Center on user's current location if geolocation prompt allowed
+          var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+          gMap.setCenter(initialLocation);
+          gMap.setZoom(13);
+        }, function(positionError) {
+          // User denied geolocation prompt - default to Boston College
+          gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+          gMap.setZoom(5);
+        });
       }
 
-      async function autoSource() {
-        const address = 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/autocomplete/json?components=country:us&types=address&input='
-        let input = document.getElementsByName("source")[0].value;
-        const response = await fetch(address + input + '&key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM', {
+
+      // Use place autocomplete api to find the data for the source/destination
+      async function autoFind(userInput) {
+        let type = '';
+        if (userInput == 'source') {
+          type = 'source';
+        } else {
+          type = 'destination';
+        }
+
+        const url = 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/autocomplete/json?components=country:us&types=address&input='
+        let input = document.getElementsByName(type)[0].value;
+
+        const response = await fetch(url + input + '&key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM', {
         });
         data = await response.json();
+
         console.log(data.predictions[0].description);
-        source = data.predictions[0].description;
+
+        if (type == 'source') {
+          source = data.predictions[0].description;
+        } else {
+          destination = data.predictions[0].description;
+        }
       }
 
-      async function autoDestination() {
-        const address = 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/autocomplete/json?components=country:us&types=address&input='
-        let input = document.getElementsByName("destination")[0].value;
-        const response = await fetch(address + input + '&key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM', {
-        });
-        data = await response.json();
-        console.log(data.predictions[0].description);
-        destination = data.predictions[0].description;
-      }
+      // uses open geolocation api to get the latitude and longitude data for the source/destination
+      async function getLatLng(type) {
+        const url = 'http://open.mapquestapi.com/geocoding/v1/address?key=ndy3lEKEGEj3FIGsShsuQVZ5QqtakWer';
+        let address = '';
 
-      async function getSourceLatLng() {
-        const address = 'http://open.mapquestapi.com/geocoding/v1/address?key=ndy3lEKEGEj3FIGsShsuQVZ5QqtakWer';
-        let address1 = source.split(' ').join('+');
-        console.log(address1);
-        const response = await fetch(address + '&location=' + address1, {
-        });
-        data = await response.json();
-        sourceLatLng = data.results[0].locations[0].latLng;
-        console.log(sourceLatLng);
-      }
+        if (type == 'source') {
+          address = source.split(' ').join('+');
+        } else {
+          address = destination.split(' ').join('+');
+        }
 
-      async function getDestinationLatLng() {
-        const address = 'http://open.mapquestapi.com/geocoding/v1/address?key=ndy3lEKEGEj3FIGsShsuQVZ5QqtakWer';
-        let address1 = destination.split(' ').join('+');
-        console.log(address1);
-        const response = await fetch(address + '&location=' + address1, {
+        console.log(address);
+
+        const response = await fetch(url + '&location=' + address, {
         });
         data = await response.json();
-        destinationLatLng = data.results[0].locations[0].latLng;
-        console.log(destinationLatLng);
+
+        if (type == 'source') {
+          sourceLatLng = data.results[0].locations[0].latLng;
+          console.log(sourceLatLng);
+        } else {
+          destinationLatLng = data.results[0].locations[0].latLng;
+          console.log(destinationLatLng);
+        }
       }
 
       function initMap() {
