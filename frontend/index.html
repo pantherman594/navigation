@@ -78,6 +78,7 @@
       let gMap;
       let source;
       let destination;
+      let addedElements = [];
       // create the google map widget
       // function initMap() {
 
@@ -108,8 +109,16 @@
         Promise.all([getLatLng(source), getLatLng(destination)])
           .then(([sourceCoords, destCoords]) => {
             updateMap(sourceCoords, destCoords);
+            clearMap();
+            // loadHeatmap(sourceCoords, destCoords);
             return getRoutes(sourceCoords, destCoords);
           });
+      }
+
+      async function clearMap() {
+        for (const element of addedElements) {
+          element.setMap(null);
+        }
       }
 
       // uses open geolocation api to get the latitude and longitude data for the source/destination
@@ -151,6 +160,35 @@
           label: 'B',
           map: gMap,
         });
+
+        addedElements.push(sourceMarker);
+        addedElements.push(destMarker);
+      }
+
+      async function loadHeatmap(source, dest) {
+        const url = new URL('http://localhost:8080/otp/routers/default/isochrone?cutoffSec=1800&cutoffSec=3600');
+
+        const params = [
+          ['fromPlace', `${source.lat},${source.lng}`],
+          ['time', moment().format('h:mma')],
+          ['date', moment().format('M-D-YYYY')],
+          ['mode', 'TRANSIT,WALK'],
+          ['maxWalkDistance', 1609*3], // 1 mile in meters
+          ['cutoffSec', 1*15*60],
+          ['cutoffSec', 2*15*60],
+          ['cutoffSec', 3*15*60],
+          ['cutoffSec', 4*15*60],
+          ['cutoffSec', 5*15*60],
+          ['cutoffSec', 6*15*60],
+          ['cutoffSec', 7*15*60],
+          ['cutoffSec', 8*15*60],
+        ]
+        url.search = new URLSearchParams(params);
+
+        const response = await fetch(url);
+        const data = await response.json();
+        gMap.data.addGeoJson(data);
+        console.log(data);
       }
 
       async function getRoutes(source, dest) {
@@ -163,6 +201,8 @@
           date: moment().format('M-D-YYYY'),
           mode: 'TRANSIT,WALK',
           maxWalkDistance: 1609, // 1 mile in meters
+          showIntermediateStops: true,
+          transferPenalty: 60,
         }
         url.search = new URLSearchParams(params);
 
@@ -173,35 +213,103 @@
 
         const legs = route.legs;
 
-        let lastPos = null;
+        const positions = [];
+        // TODO: better formattin
+        const wrapper = document.createElement('ul');
+        let prevLegEnd = null;
+
+        const listElement = document.createElement('li');
+        listElement.innerHTML = `${moment(route.startTime).format('h:mm a')} - ${moment(route.endTime).format('h:mm a')} (${moment.duration(route.endTime - route.startTime).humanize().replace(/an?/g, '1')})`;
+        list.appendChild(listElement);
+        moment.relativeTimeThreshold('ss', 0);
 
         for (const leg of legs) {
           console.log(leg);
           const from = new google.maps.LatLng(leg.from.lat, leg.from.lon);
           const to = new google.maps.LatLng(leg.to.lat, leg.to.lon);
 
-          const routeMarker = new google.maps.Marker({
-            position: to,
-            map: gMap,
-          });
+          // addPos(from, getColor(leg), positions);
 
           for (const step of leg.steps) {
             const pos = new google.maps.LatLng(step.lat, step.lon);
+            // addPos(pos, getColor(leg), positions);
+          }
+          // addPos(to, getColor(leg), positions);
 
-            if (lastPos) {
-              const path = new google.maps.Polyline({     
-                path: [lastPos, pos],
-                geodesic: true,
-                strokeColor: '#FF0000',
-                strokeOpacity: 1.0,
-                strokeWeight: 2,
-              });    
-              path.setMap(gMap);
+          if (leg.transitLeg === true) {
+            let wait = 'Ride';
+            const waitTime = leg.from.departure - leg.from.arrival;
+            if (waitTime > 30000) {
+              wait = `Wait ${moment.duration(waitTime).humanize().replace(/an?/g, '1')}, then ride`;
             }
 
-            lastPos = pos;
+            let route = leg.route.length > 3 ? leg.route : leg.routeLongName;
+            if (leg.mode === 'BUS') {
+              if (leg.agencyName === 'Boston College') {
+                route = leg.headsign;
+              } else {
+                route = `${leg.routeShortName} bus`;
+              }
+            }
+
+            const numStops = leg.intermediateStops.length + 1;
+            const stops = numStops === 1 ? '1 stop' : `${numStops} stops`;
+
+            const listElement = document.createElement('li');
+            listElement.innerHTML = `${wait} the ${route} ${stops} (${moment.duration(leg.duration, 'seconds').humanize().replace(/an?/g, '1')}) to ${leg.to.name}.`;
+            list.appendChild(listElement);
+          } else {
+            const listElement = document.createElement('li');
+            listElement.innerHTML = `Walk ${moment.duration(leg.duration, 'seconds').humanize().replace(/an?/g, '1')} to ${leg.to.name}`;
+            list.appendChild(listElement);
+          }
+
+          const decodedPath = google.maps.geometry.encoding.decodePath(leg.legGeometry.points);
+          console.log(decodedPath);
+          positions.push({ positions: decodedPath, color: getColor(leg) });
+
+          if (false && leg.from.name !== 'Origin') {
+            const marker = new google.maps.Circle({
+              center: from,
+              radius: 50,
+              fillColor: '#ffffff',
+              fillOpacity: 1,
+              strokeColor: '#6688ff',
+              strokeOpacity: 0.8,
+              strokeWeight: 2,
+              map: gMap,
+            });
+            addedElements.push(marker);
           }
         }
+
+        const planningOptions = document.getElementById('planning-options');
+        planningOptions.innerHTML = '';
+        planningOptions.appendChild(list);
+
+        for (const pos of positions) {
+          const path = new google.maps.Polyline({     
+            path: pos.positions,
+            geodesic: true,
+            strokeColor: pos.color,
+            strokeOpacity: 0.5,
+            strokeWeight: 5,
+          });    
+          path.setMap(gMap);
+          addedElements.push(path);
+        }
+      }
+
+      function getColor(leg) {
+        // if (leg.mode === 'BUS') {
+          switch (leg.agencyName) {
+            case 'MBTA':
+              return '#165c7d';
+            case 'Boston College':
+              return '#8a100b';
+          }
+        // }
+        return '#efbd17';
       }
 
       function initMap() {
@@ -219,12 +327,12 @@
         });
        
         //Autocompletes address information
-        source = new google.maps.places.Autocomplete(document.getElementById('source'), { types: [ 'geocode' ] });
+        source = new google.maps.places.Autocomplete(document.getElementById('source'), { types: [] });
         google.maps.event.addListener(source, 'place_changed', function() {
           //fillInAddress();
         });
 
-        destination = new google.maps.places.Autocomplete(document.getElementById('destination'), { types: [ 'geocode' ] });
+        destination = new google.maps.places.Autocomplete(document.getElementById('destination'), { types: [] });
         google.maps.event.addListener(destination, 'place_changed', function() {
           //fillInAddress();
         });
@@ -249,7 +357,7 @@
       
         
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM&callback=initMap&libraries=places"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM&callback=initMap&libraries=geometry,places"
     async defer></script>
   </body>
 </html>
