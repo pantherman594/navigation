@@ -4,31 +4,49 @@
     <title>Navigation</title>
     <meta name="viewport" content="initial-scale=1.0">
     <meta charset="utf-8">
+    <script src="https://momentjs.com/downloads/moment.min.js"></script>
     <style>
       /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
       #map {
         height: 100%;
-        width: 80%;
+        width: 70%;
         position: absolute !important;
         right: 0;
       }
 
       #source-des {
+        padding-top: 20px;
         height: 30%;
-        width: 20%;
-        position: absolute !important;
-        left: 0;
-        top: 0;
+        background-color: #4285F4;
+        margin: 0 auto;
+      }
+
+      #source-des input {
+        display: block;
+        margin: 0 auto;
+        color: white;
+        padding: 10px;
+        font-size: 16px;
+        width: 80%;
       }
 
       #planning-options {
         height: 70%;
-        width: 20%;
-        position: absolute !important;
-        left: 0;
-        bottom: 0;
       }
+
+      #left-wrapper {
+        width: 30%;
+        height: 100%;
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+
+      #source-des #submit {
+        color: black;
+      }
+
       /* Optional: Makes the sample page fill the window. */
       html, body {
         height: 100%;
@@ -38,35 +56,28 @@
     </style>
   </head>
   <body>
-    <div id="map"></div>
-    <div id="source-des" style="background-color: #4285F4;">
-      <!-- Form to get the source and destination -->
-      <form onsubmit="onSubmit()" style="position: absolute;top: 50%;left: 50%;margin-left: -37%;margin-top: -32%;">
-        <br>
-        <input type="text" name = "source" id="source" placeholder="Choose starting point..." style="border-color:darkgray; border-top:none; border-right:none; border-left:none; background-color:inherit"><br>
-        <br>
-        <input type="text" name="destination" id="destination" placeholder="Choose destination..." style="border-color: darkgray;border-top: none; border-right: none; border-left: none; background-color: inherit"><br>
-        <br>
-        <input type="submit" value="Submit" name="form" id="form">
-      </form>
+    <div id="wrapper">
+      <div id="map"></div>
+      <div id="left-wrapper">
+        <div id="source-des">
+          <!-- Form to get the source and destination -->
+          <form onsubmit="onSubmit()">
+            <br>
+            <input type="text" name = "source" id="source" placeholder="Choose starting point" style="border-color:darkgray; border-top:none; border-right:none; border-left:none; background-color:inherit"><br>
+            <br>
+            <input type="text" name="destination" id="destination" placeholder="Choose destination" style="border-color: darkgray;border-top: none; border-right: none; border-left: none; background-color: inherit"><br>
+            <br>
+            <input type="submit" value="Submit" name="submit" id="submit">
+          </form>
+        </div>
+        <div id="planning-options"></div>
+      </div>
     </div>
-    <div id="planning-options"></div>
       <!-- Grab the user's location and center the map there.  -->
     <script>
-      let source = '';
-      let destination = '';
-      let data = '';
-      let sourceLatLng = '';
-      let destinationLatLng = '';
-      
-      document.getElementById('source').addEventListener("input", function(){
-        autoFind('source');
-      });
-
-      document.getElementById('destination').addEventListener("input", function(){
-        autoFind('destination');
-      });
-
+      let gMap;
+      let source;
+      let destination;
       // create the google map widget
       // function initMap() {
 
@@ -87,67 +98,114 @@
       function onSubmit() {
         event.preventDefault()
         // writes the autocompleted address to source and destination
-        source = document.getElementById("source").value;
+        const source = document.getElementById("source");
         // document.getElementById("source").value = source;
         // document.getElementById("destination").value = destination;
-        destination = document.getElementById("destination").value;
-        getLatLng('source');
-        getLatLng('destination');
-      }
+        const destination = document.getElementById("destination");
 
-      // Use place autocomplete api to find the data for the source/destination
-      async function autoFind(userInput) {
-        let type = '';
-        if (userInput == 'source') {
-          type = 'source';
-        } else {
-          type = 'destination';
-        }
+        if (!source.value || !destination.value) return;
 
-        const url = 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/autocomplete/json?components=country:us&types=address&input='
-        let input = document.getElementsByName(type)[0].value;
-
-        const response = await fetch(url + input + '&key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM', {
-        });
-        data = await response.json();
-
-        console.log(data.predictions[0].description);
-
-        if (type == 'source') {
-          source = data.predictions[0].description;
-        } else {
-          destination = data.predictions[0].description;
-        }
+        Promise.all([getLatLng(source), getLatLng(destination)])
+          .then(([sourceCoords, destCoords]) => {
+            updateMap(sourceCoords, destCoords);
+            return getRoutes(sourceCoords, destCoords);
+          });
       }
 
       // uses open geolocation api to get the latitude and longitude data for the source/destination
-      async function getLatLng(type) {
-        const url = 'http://open.mapquestapi.com/geocoding/v1/address?key=ndy3lEKEGEj3FIGsShsuQVZ5QqtakWer';
-        let address = '';
+      async function getLatLng(element) {
+        const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
 
-        if (type == 'source') {
-          address = source.split(' ').join('+');
-        } else {
-          address = destination.split(' ').join('+');
+        const address = element.value;
+
+        const params = {
+          key: 'AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM',
+          address,
         }
+        url.search = new URLSearchParams(params);
 
-        console.log(address);
+        const response = await fetch(url);
+        const data = await response.json();
 
-        const response = await fetch(url + '&location=' + address, {
+        return data.results[0].geometry.location;
+      }
+
+      function updateMap(source, dest) {
+        const sourcePos = new google.maps.LatLng(source.lat, source.lng);
+        const destPos = new google.maps.LatLng(dest.lat, dest.lng);
+
+        const bounds = new google.maps.LatLngBounds();
+
+        bounds.extend(sourcePos);
+        bounds.extend(destPos);
+
+        gMap.fitBounds(bounds);
+
+        const sourceMarker = new google.maps.Marker({
+          position: sourcePos,
+          label: 'A',
+          map: gMap,
         });
-        data = await response.json();
+        const destMarker = new google.maps.Marker({
+          position: destPos,
+          label: 'B',
+          map: gMap,
+        });
+      }
 
-        if (type == 'source') {
-          sourceLatLng = data.results[0].locations[0].latLng;
-          console.log(sourceLatLng);
-        } else {
-          destinationLatLng = data.results[0].locations[0].latLng;
-          console.log(destinationLatLng);
+      async function getRoutes(source, dest) {
+        const url = new URL('http://localhost:8080/otp/routers/default/plan');
+
+        const params = {
+          fromPlace: `${source.lat},${source.lng}`,
+          toPlace: `${dest.lat},${dest.lng}`,
+          time: moment().format('h:mma'),
+          date: moment().format('M-D-YYYY'),
+          mode: 'TRANSIT,WALK',
+          maxWalkDistance: 1609, // 1 mile in meters
+        }
+        url.search = new URLSearchParams(params);
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const route = data.plan.itineraries[0];
+
+        const legs = route.legs;
+
+        let lastPos = null;
+
+        for (const leg of legs) {
+          console.log(leg);
+          const from = new google.maps.LatLng(leg.from.lat, leg.from.lon);
+          const to = new google.maps.LatLng(leg.to.lat, leg.to.lon);
+
+          const routeMarker = new google.maps.Marker({
+            position: to,
+            map: gMap,
+          });
+
+          for (const step of leg.steps) {
+            const pos = new google.maps.LatLng(step.lat, step.lon);
+
+            if (lastPos) {
+              const path = new google.maps.Polyline({     
+                path: [lastPos, pos],
+                geodesic: true,
+                strokeColor: '#FF0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+              });    
+              path.setMap(gMap);
+            }
+
+            lastPos = pos;
+          }
         }
       }
 
       function initMap() {
-        var gMap = new google.maps.Map(document.getElementById('map'));
+        gMap = new google.maps.Map(document.getElementById('map'));
 
         navigator.geolocation.getCurrentPosition(function(position) {
           // Center on user's current location if geolocation prompt allowed
