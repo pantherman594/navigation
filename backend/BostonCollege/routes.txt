@@ -1,0 +1,8 @@
+route_id,route_short_name,route_long_name,route_type
+4005574,Comm Ave All Stops,,3
+4005578,Comm Ave Direct,,3
+4005582,Comm Ave Direct Express,,3
+4005598,Newton Eagle All Stops,,3
+4005602,Newton Eagle Direct,,3
+4005606,Newton Eagle Limited,,3
+4005610,Newton Eagle Weekend Limited,,3

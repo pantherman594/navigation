@@ -120,14 +120,17 @@ outFmt = "%H:%M:%S"
 allTimes = input_times()
 num = 0
 for schedule in schedules:
-    times = allTimes[num]
+    # times = allTimes[num]
     num += 1
 
     currStops = schedule[0]
 
+    print(schedule[1])
+    # print('/'.join([','.join(stops[stop]) for stop in currStops + [currStops[0]]]))
+
     start = ','.join(stops[currStops[0]])
-    end = ','.join(stops[currStops[-1]])
-    waypoints = '|'.join([','.join(stops[stop]) for stop in currStops[1:-1]])
+    end = start
+    waypoints = '|'.join([','.join(stops[stop]) for stop in currStops[1:]])
     url = 'https://maps.googleapis.com/maps/api/directions/json'
     params = dict(
         origin=start,
@@ -137,9 +140,11 @@ for schedule in schedules:
     )
 
     resp = requests.get(url=url, params=params)
-    legs = resp.json()['routes'][0]['legs']
-    print(schedule[1])
+    print(resp.url)
+    continue
+    print(resp.json())
     print(resp.json()['routes'][0]['overview_polyline']['points'])
+    continue
 
     i = 0
     for startTime in times:

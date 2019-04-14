@@ -5,6 +5,8 @@
     <meta name="viewport" content="initial-scale=1.0">
     <meta charset="utf-8">
     <script src="https://momentjs.com/downloads/moment.min.js"></script>
+    <script src="./window-date-picker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="./window-date-picker.min.css">
     <style>
       /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
@@ -17,22 +19,39 @@
 
       #source-des {
         padding-top: 20px;
-        height: 30%;
+        height: 40%;
         background-color: #4285F4;
         margin: 0 auto;
       }
 
-      #source-des input {
+      #source-des > form > input, #source-des > form > select {
         display: block;
         margin: 0 auto;
-        color: white;
         padding: 10px;
         font-size: 16px;
         width: 80%;
+        color: black;
+      }
+
+      #source-des > form > input {
+        border-color: darkgray;
+        border-top: none;
+        border-right: none;
+        border-left: none;
+        background-color: inherit;
+        color: white;
+      }
+
+      #source-des > form > input:hover {
+        background-color: #557BBC;
+      }
+
+      #submit {
+        cursor: pointer;
       }
 
       #planning-options {
-        height: 70%;
+        height: 60%;
       }
 
       #left-wrapper {
@@ -43,8 +62,14 @@
         top: 0;
       }
 
-      #source-des #submit {
-        color: black;
+      .feather {
+        width: 24px;
+        height: 24px;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
       }
 
       /* Optional: Makes the sample page fill the window. */
@@ -52,6 +77,30 @@
         height: 100%;
         margin: 0;
         padding: 0;
+        font-family: sans-serif;
+      }
+
+      #source-des #planned-datetime {
+        display: none;
+      }
+
+      #picker {
+        left: 2% !important;
+        top: 270px !important;
+      }
+
+      .list-element {
+        padding: 10px 10px;
+      }
+
+      .duration {
+        padding-top: 20px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .error {
+        color: red;
       }
     </style>
   </head>
@@ -63,10 +112,15 @@
           <!-- Form to get the source and destination -->
           <form onsubmit="onSubmit()">
             <br>
-            <input type="text" name = "source" id="source" placeholder="Choose starting point" style="border-color:darkgray; border-top:none; border-right:none; border-left:none; background-color:inherit"><br>
-            <br>
-            <input type="text" name="destination" id="destination" placeholder="Choose destination" style="border-color: darkgray;border-top: none; border-right: none; border-left: none; background-color: inherit"><br>
-            <br>
+            <input type="text" name = "source" id="source" placeholder="Choose starting point"><br>
+            <input type="text" name="destination" id="destination" placeholder="Choose destination"><br>
+            <select id="time-select">
+              <option selected value="now">Leave now</option>
+              <option value="depart">Depart at</option>
+              <option value="arrive">Arrive by</option>
+            </select><br>
+            <input type="text" name="planned-datetime" id="planned-datetime"><br>
+            <div id="picker" class="wdp-blue"></div>
             <input type="submit" value="Submit" name="submit" id="submit">
           </form>
         </div>
@@ -78,23 +132,30 @@
       let gMap;
       let source;
       let destination;
-      let addedElements = [];
-      // create the google map widget
-      // function initMap() {
+      let clearMapElements = [];
+      const timeSelect = document.getElementById('time-select');
 
-      //   gMap = new google.maps.Map(document.getElementById('map'));
+      const picker = new WindowDatePicker({
+        el: '#picker',
+        inputEl: '#planned-datetime',
+        inputToggle: true,
+        dateType: 'MM/DD/YYYY',
+        type: 'DATEHOUR',
+      });
 
-      //   navigator.geolocation.getCurrentPosition(function(position) {
-      //     // Center on user's current location if geolocation prompt allowed
-      //     var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-      //     gMap.setCenter(initialLocation);
-      //     gMap.setZoom(13);
-      //   }, function(positionError) {
-      //     // User denied geolocation prompt - default to Boston College
-      //     gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
-      //     gMap.setZoom(5);
-      //   });
-      // }
+      timeSelect.addEventListener('change', (event) => {
+        if (event.target.value !== 'now') {
+          document.getElementById('planned-datetime').style.display = 'block';
+        } else {
+          document.getElementById('planned-datetime').style.display = 'none';
+        }
+      });
+
+      if (timeSelect.value !== 'now') {
+        document.getElementById('planned-datetime').style.display = 'block';
+      } else {
+        document.getElementById('planned-datetime').style.display = 'none';
+      }
 
       function onSubmit() {
         event.preventDefault()
@@ -108,16 +169,16 @@
 
         Promise.all([getLatLng(source), getLatLng(destination)])
           .then(([sourceCoords, destCoords]) => {
-            updateMap(sourceCoords, destCoords);
             clearMap();
+            updateMap(sourceCoords, destCoords);
             // loadHeatmap(sourceCoords, destCoords);
             return getRoutes(sourceCoords, destCoords);
           });
       }
 
       async function clearMap() {
-        for (const element of addedElements) {
-          element.setMap(null);
+        for (const command of clearMapElements) {
+          command();
         }
       }
 
@@ -161,8 +222,9 @@
           map: gMap,
         });
 
-        addedElements.push(sourceMarker);
-        addedElements.push(destMarker);
+        console.log(destMarker);
+        resetGenericElement(sourceMarker);
+        resetGenericElement(destMarker);
       }
 
       async function loadHeatmap(source, dest) {
@@ -187,27 +249,53 @@
 
         const response = await fetch(url);
         const data = await response.json();
-        gMap.data.addGeoJson(data);
+        const geoJson = gMap.data.addGeoJson(data);
+        clearMapElements.push(() => {
+          for (const feature of geoJson) {
+            gMap.data.remove(feature);
+          }
+        });
         console.log(data);
       }
 
       async function getRoutes(source, dest) {
         const url = new URL('http://localhost:8080/otp/routers/default/plan');
 
+        let time = moment();
+        if (timeSelect.value !== 'now') {
+          time = moment(document.getElementById('planned-datetime').value, "MM/DD/YYYY hh:mm A");
+        }
+
         const params = {
           fromPlace: `${source.lat},${source.lng}`,
           toPlace: `${dest.lat},${dest.lng}`,
-          time: moment().format('h:mma'),
-          date: moment().format('M-D-YYYY'),
           mode: 'TRANSIT,WALK',
-          maxWalkDistance: 1609, // 1 mile in meters
+          maxWalkDistance: 1609 * 2, // 1 mile in meters
           showIntermediateStops: true,
           transferPenalty: 60,
+          time: time.format('h:mma'),
+          date: time.format('M-D-YYYY'),
+          arriveBy: timeSelect.value === 'arrive',
         }
+
         url.search = new URLSearchParams(params);
 
         const response = await fetch(url);
         const data = await response.json();
+
+        const wrapper = document.createElement('div');
+
+        if (data.error) {
+          const listElement = document.createElement('div');
+          listElement.classList.add('list-element', 'error');
+          listElement.innerHTML = data.error.msg;
+          wrapper.appendChild(listElement);
+
+          const planningOptions = document.getElementById('planning-options');
+          planningOptions.innerHTML = '';
+          planningOptions.appendChild(wrapper);
+          return;
+        }
 
         const route = data.plan.itineraries[0];
 
@@ -215,12 +303,12 @@
 
         const positions = [];
         // TODO: better formattin
-        const wrapper = document.createElement('ul');
         let prevLegEnd = null;
 
-        const listElement = document.createElement('li');
+        const listElement = document.createElement('div');
+        listElement.classList.add('list-element', 'duration');
         listElement.innerHTML = `${moment(route.startTime).format('h:mm a')} - ${moment(route.endTime).format('h:mm a')} (${moment.duration(route.endTime - route.startTime).humanize().replace(/an?/g, '1')})`;
-        list.appendChild(listElement);
+        wrapper.appendChild(listElement);
         moment.relativeTimeThreshold('ss', 0);
 
         for (const leg of legs) {
@@ -246,7 +334,7 @@
             let route = leg.route.length > 3 ? leg.route : leg.routeLongName;
             if (leg.mode === 'BUS') {
               if (leg.agencyName === 'Boston College') {
-                route = leg.headsign;
+                route = leg.route;
               } else {
                 route = `${leg.routeShortName} bus`;
               }
@@ -255,13 +343,15 @@
             const numStops = leg.intermediateStops.length + 1;
             const stops = numStops === 1 ? '1 stop' : `${numStops} stops`;
 
-            const listElement = document.createElement('li');
+            const listElement = document.createElement('div');
+            listElement.classList.add('list-element', 'step');
             listElement.innerHTML = `${wait} the ${route} ${stops} (${moment.duration(leg.duration, 'seconds').humanize().replace(/an?/g, '1')}) to ${leg.to.name}.`;
-            list.appendChild(listElement);
+            wrapper.appendChild(listElement);
           } else {
-            const listElement = document.createElement('li');
+            const listElement = document.createElement('div');
+            listElement.classList.add('list-element', 'step');
             listElement.innerHTML = `Walk ${moment.duration(leg.duration, 'seconds').humanize().replace(/an?/g, '1')} to ${leg.to.name}`;
-            list.appendChild(listElement);
+            wrapper.appendChild(listElement);
           }
 
           const decodedPath = google.maps.geometry.encoding.decodePath(leg.legGeometry.points);
@@ -279,13 +369,13 @@
               strokeWeight: 2,
               map: gMap,
             });
-            addedElements.push(marker);
+            resetGenericElement(marker);
           }
         }
 
         const planningOptions = document.getElementById('planning-options');
         planningOptions.innerHTML = '';
-        planningOptions.appendChild(list);
+        planningOptions.appendChild(wrapper);
 
         for (const pos of positions) {
           const path = new google.maps.Polyline({     
@@ -296,8 +386,12 @@
             strokeWeight: 5,
           });    
           path.setMap(gMap);
-          addedElements.push(path);
+          resetGenericElement(path);
         }
+      }
+
+      function resetGenericElement(element) {
+        clearMapElements.push(() => element.setMap(null));
       }
 
       function getColor(leg) {
