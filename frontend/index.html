@@ -9,7 +9,7 @@
        * element that contains the map. */
       #map {
         height: 100%;
-        width: 80%;
+        width: 70%;
         position: absolute !important;
         right: 0;
       }
@@ -43,10 +43,10 @@
       <!-- Form to get the source and destination -->
       <form onsubmit="onSubmit()">
         Source:<br>
-        <input type="text" name = "source" id="source"><br>
+        <input type="text" class = "controls" name = "source" id="source" placeholder="Source"><br>
         Destination:<br>
-        <input type="text" name="destination" id="destination"><br><br>
-        <input type="submit" value="Submit" name="form" id="form">
+        <input type="text" class = "controls" name="destination" id="destination" placeholder="Destination"><br><br>
+        <input type="submit"  value="Submit" name="form" id="form">
       </form>
 
     </div>
@@ -118,8 +118,7 @@
       }
 
       function initMap() {
-
-        gMap = new google.maps.Map(document.getElementById('map'));
+        var gMap = new google.maps.Map(document.getElementById('map'));
 
         navigator.geolocation.getCurrentPosition(function(position) {
           // Center on user's current location if geolocation prompt allowed
@@ -131,9 +130,39 @@
           gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
           gMap.setZoom(5);
         });
+       
+        //Autocompletes address information
+        source = new google.maps.places.Autocomplete(document.getElementById('source'), { types: [ 'geocode' ] });
+        google.maps.event.addListener(source, 'place_changed', function() {
+          fillInAddress();
+        });
+
+        destination = new google.maps.places.Autocomplete(document.getElementById('destination'), { types: [ 'geocode' ] });
+        google.maps.event.addListener(destination, 'place_changed', function() {
+          fillInAddress();
+        });
+        //var input = document.getElementById('destination');
+        //gMap.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+                
+        // var autocomplete = new google.maps.places.Autocomplete(input);
+
+        //Moves map to source address
+        // autocomplete.addListener('place_changed', function() {
+        //   infowindow.close();
+        //   marker.setVisible(false);
+        //   var place = autocomplete.getPlace();
+        //   if (!place.geometry) {
+        //     // User entered the name of a Place that was not suggested and
+        //     // pressed the Enter key, or the Place Details request failed.
+        //     window.alert("No details available for input: '" + place.name + "'");
+        //     return;
+        // }
+        // });
       }
+      
+        
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM&callback=initMap"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM&callback=initMap&libraries=places"
     async defer></script>
   </body>
 </html>
