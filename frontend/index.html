@@ -39,13 +39,13 @@
   </head>
   <body>
     <div id="map"></div>
-    <div id="source-des">
+    <div id="source-des" style="background-color: #4285F4;">
       <!-- Form to get the source and destination -->
-      <form onsubmit="onSubmit()">
-        Source:<br>
-        <input type="text" name = "source" id="source"><br>
-        Destination:<br>
-        <input type="text" name="destination" id="destination"><br><br>
+      <form onsubmit="onSubmit()" style="position: relative;top: 50%;left: 50%;margin-left: -37%;margin-top: -32%;">
+        <br>
+        <input type="text" name = "source" id="source" placeholder="Choose starting point..." style="border-color:darkgray; border-top:none; border-right:none; border-left:none; background-color:inherit"><br>
+        <br>
+        <input type="text" name="destination" id="destination" placeholder="Choose destination..." style="border-color: darkgray;border-top: none; border-right: none; border-left: none; background-color: inherit"><br><br>
         <input type="submit" value="Submit" name="form" id="form">
       </form>
 
@@ -78,7 +78,7 @@
           gMap.setCenter(initialLocation);
           gMap.setZoom(13);
         }, function(positionError) {
-          // User denied geolocation prompt - default to Chicago
+          // User denied geolocation prompt - default to Boston College
           gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
           gMap.setZoom(5);
         });
