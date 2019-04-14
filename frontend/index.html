@@ -39,16 +39,16 @@
   </head>
   <body>
     <div id="map"></div>
-    <div id="source-des">
+    <div id="source-des" style="background-color: #4285F4;">
       <!-- Form to get the source and destination -->
-      <form onsubmit="onSubmit()">
-        Source:<br>
-        <input type="text" name = "source" id="source"><br>
-        Destination:<br>
-        <input type="text" name="destination" id="destination"><br><br>
+      <form onsubmit="onSubmit()" style="position: absolute;top: 50%;left: 50%;margin-left: -37%;margin-top: -32%;">
+        <br>
+        <input type="text" name = "source" id="source" placeholder="Choose starting point..." style="border-color:darkgray; border-top:none; border-right:none; border-left:none; background-color:inherit"><br>
+        <br>
+        <input type="text" name="destination" id="destination" placeholder="Choose destination..." style="border-color: darkgray;border-top: none; border-right: none; border-left: none; background-color: inherit"><br>
+        <br>
         <input type="submit" value="Submit" name="form" id="form">
       </form>
-
     </div>
     <div id="planning-options"></div>
       <!-- Grab the user's location and center the map there.  -->
@@ -67,23 +67,33 @@
         autoFind('destination');
       });
 
-      // created the google map widget
-      function initMap() {
+      // create the google map widget
+      // function initMap() {
 
-        gMap = new google.maps.Map(document.getElementById('map'));
+      //   gMap = new google.maps.Map(document.getElementById('map'));
 
-        navigator.geolocation.getCurrentPosition(function(position) {
-          // Center on user's current location if geolocation prompt allowed
-          var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-          gMap.setCenter(initialLocation);
-          gMap.setZoom(13);
-        }, function(positionError) {
-          // User denied geolocation prompt - default to Chicago
-          gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
-          gMap.setZoom(5);
-        });
+      //   navigator.geolocation.getCurrentPosition(function(position) {
+      //     // Center on user's current location if geolocation prompt allowed
+      //     var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+      //     gMap.setCenter(initialLocation);
+      //     gMap.setZoom(13);
+      //   }, function(positionError) {
+      //     // User denied geolocation prompt - default to Boston College
+      //     gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+      //     gMap.setZoom(5);
+      //   });
+      // }
+
+      function onSubmit() {
+        event.preventDefault()
+        // writes the autocompleted address to source and destination
+        source = document.getElementById("source").value;
+        // document.getElementById("source").value = source;
+        // document.getElementById("destination").value = destination;
+        destination = document.getElementById("destination").value;
+        getLatLng('source');
+        getLatLng('destination');
       }
-
 
       // Use place autocomplete api to find the data for the source/destination
       async function autoFind(userInput) {
@@ -136,18 +146,52 @@
         }
       }
 
-      function onSubmit() {
-        event.preventDefault()
+      function initMap() {
+        var gMap = new google.maps.Map(document.getElementById('map'));
 
-        // writes the autocompleted address to source and destination
-        document.getElementById("source").value = source;
-        document.getElementById("destination").value = destination;
+        navigator.geolocation.getCurrentPosition(function(position) {
+          // Center on user's current location if geolocation prompt allowed
+          var initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+          gMap.setCenter(initialLocation);
+          gMap.setZoom(13);
+        }, function(positionError) {
+          // User denied geolocation prompt - default to Chicago
+          gMap.setCenter(new google.maps.LatLng(39.8097343, -98.5556199));
+          gMap.setZoom(5);
+        });
+       
+        //Autocompletes address information
+        source = new google.maps.places.Autocomplete(document.getElementById('source'), { types: [ 'geocode' ] });
+        google.maps.event.addListener(source, 'place_changed', function() {
+          //fillInAddress();
+        });
 
-        getLatLng('source');
-        getLatLng('destination');
+        destination = new google.maps.places.Autocomplete(document.getElementById('destination'), { types: [ 'geocode' ] });
+        google.maps.event.addListener(destination, 'place_changed', function() {
+          //fillInAddress();
+        });
+        //var input = document.getElementById('destination');
+        //gMap.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+                
+        // var autocomplete = new google.maps.places.Autocomplete(input);
+
+        //Moves map to source address
+        // autocomplete.addListener('place_changed', function() {
+        //   infowindow.close();
+        //   marker.setVisible(false);
+        //   var place = autocomplete.getPlace();
+        //   if (!place.geometry) {
+        //     // User entered the name of a Place that was not suggested and
+        //     // pressed the Enter key, or the Place Details request failed.
+        //     window.alert("No details available for input: '" + place.name + "'");
+        //     return;
+        // }
+        // });
       }
+      
+        
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM&callback=initMap"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBAWAq1xYm7c8dlb3Z1vWAwffL5YHrvUEM&callback=initMap&libraries=places"
     async defer></script>
   </body>
 </html>
